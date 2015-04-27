@@ -1,0 +1,27 @@
+{
+  "name": "ems/versatile",
+  "type": "library",
+  "description": "Extensions for Laravels Eloquent ORM",
+  "keywords": ["laravel", "eloquent", "orm"],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Michael Tils",
+      "email": "mtils@web-utils.de",
+      "homepage": "http://web-utils.de"
+    }
+  ],
+  "require": {
+    "php": ">=5.4.0",
+    "illuminate/database": "5.0.*"
+  },
+  "require-dev": {
+    "mockery/mockery": "~0.9"
+  },
+  "autoload": {
+    "psr-0": {
+      "Versatile": "src/"
+    }
+  },
+  "minimum-stability": "dev"
+}
