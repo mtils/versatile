@@ -4,7 +4,7 @@ interface TitleIntrospector
 {
 
     /**
-     * Returns a readable title of a object property
+     * Returns a readable title of an object property
      *
      * @param string|object $class The class or an object of it
      * @param string $path A key name. Can be dotted like address.street.name
