@@ -81,8 +81,8 @@ class Builder
 
         }
         else{
-
-            $this->query->where($column, $operator, $value, $boolean);
+            $table = $this->model->getTable();
+            $this->query->where("$table.$column", $operator, $value, $boolean);
 
         }
 
