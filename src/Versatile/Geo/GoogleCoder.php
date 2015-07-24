@@ -48,7 +48,24 @@ class GoogleCoder implements Coder
 
     protected function formatAddress($address)
     {
-        return str_replace('Str.', 'Straße', $address);
+        if (is_string($address)) {
+            return str_replace('Str.', 'Straße', $address);
+        }
+
+        $methods = [
+            'street', 'postCode', 'city', 'country'
+        ];
+
+        $parts = [];
+
+        foreach ($methods as $method) {
+            if ($res = $address->{$method}()) {
+                $parts[] = $res;
+            }
+        }
+
+        return implode(', ', $parts);
+
     }
 
 }
