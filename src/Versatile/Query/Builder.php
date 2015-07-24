@@ -4,6 +4,7 @@ use Versatile\Query\Contracts\SyntaxParser;
 use Versatile\Query\SyntaxParser as DefaultParser;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Model;
 use UnderflowException;
 use App;
@@ -89,6 +90,30 @@ class Builder
         return $this;
     }
 
+    public function whereIn($column, $values = null, $boolean = 'and', $not=false){
+
+        if($this->isRelatedKey($column)){
+
+            list($join, $property) = $this->toJoinAndKey($column);
+
+            if($join){
+
+                $this->addJoinOnce($this->model, $join);
+
+                $this->query->whereIn($this->joinColumn($join, $property), $values, $boolean, $not);
+
+            }
+
+        }
+        else{
+            $table = $this->model->getTable();
+            $this->query->whereIn("$table.$column", $values, $boolean, $not);
+
+        }
+
+        return $this;
+    }
+
     /**
      * Add an "or where" clause to the query.
      *
@@ -125,8 +150,8 @@ class Builder
 
         }
         else{
-
-            $this->query->orderBy($column, $direction);
+            $table = $this->model->getTable();
+            $this->query->orderBy("$table.$column", $direction);
 
         }
 
@@ -240,6 +265,9 @@ class Builder
                 case "{$ns}HasOne":
                     $this->applyHasOne($model, $relation, $name);
                     break;
+                case "{$ns}BelongsToMany":
+                    $this->applyBelongsToMany($model, $relation, $name);
+                    break;
                 default:
                     throw new UnderflowException('Currently only BelongsTo and HasOne is supported');
             }
@@ -291,6 +319,34 @@ class Builder
         $this->query->distinct();
 
         $this->joinClasses[$name] = $hasOne->getRelated();
+        $this->joinTable[$name] = $relatedTable;
+        $this->joinAliases[$name] = $alias;
+
+    }
+
+    protected function applyBelongsToMany(Model $model, BelongsToMany $belongsToMany, $name){
+
+        if(isset($this->joinClasses[$name])){
+            return;
+        }
+
+        $modelTable = $model->getTable();
+        $related = $belongsToMany->getRelated();
+        $pivotTable = $belongsToMany->getTable();
+        $pivotAlias = $pivotTable.'_pivot';
+        $pivotLocalKey = $belongsToMany->getOtherKey();
+        $relatedTable = $related->getTable();
+        $relationKey = $related->getKeyName();
+        $foreignKey = $belongsToMany->getForeignKey();
+        $qualifiedLocalKey = $belongsToMany->getQualifiedParentKeyName();
+
+        $alias = $this->joinNameToAlias($name);
+
+        $this->query->join("$pivotTable", "$qualifiedLocalKey",'=',"$foreignKey");
+        $this->query->join("$relatedTable AS $alias", "$relatedTable.$relationKey",'=',"$pivotLocalKey");
+        $this->query->distinct();
+
+        $this->joinClasses[$name] = $related;
         $this->joinTable[$name] = $relatedTable;
         $this->joinAliases[$name] = $alias;
 
