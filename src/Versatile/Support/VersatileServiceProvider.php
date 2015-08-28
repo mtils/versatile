@@ -30,6 +30,7 @@ class VersatileServiceProvider extends ServiceProvider {
         $this->registerSyntaxParser();
         $this->registerPathIntrospector();
         $this->registerTitleIntrospector();
+        $this->registerTypeIntrospector();
         $this->registerViewCollectionFactory();
         $this->registerBuilderViewCollectionFactory();
     }
@@ -72,6 +73,20 @@ class VersatileServiceProvider extends ServiceProvider {
 
         $this->app->singleton('versatile.title-introspector',function($app){
             return $app->make('Versatile\Introspection\EloquentTitleIntrospector');
+        });
+
+    }
+
+    protected function registerTypeIntrospector()
+    {
+
+        $this->app->alias(
+            'versatile.type-introspector',
+            'Versatile\Introspection\Contracts\TypeIntrospector'
+        );
+
+        $this->app->singleton('versatile.type-introspector',function($app){
+            return $app->make('Versatile\Introspection\EloquentTypeIntrospector');
         });
 
     }

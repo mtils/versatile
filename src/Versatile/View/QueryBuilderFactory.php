@@ -3,6 +3,7 @@
 use Versatile\View\Contracts\CollectionFactory;
 use Versatile\Query\Builder;
 use Versatile\Introspection\Contracts\TitleIntrospector;
+use Versatile\Introspection\Contracts\TypeIntrospector;
 use Collection\View\Collection;
 use Collection\ColumnList;
 use Collection\ValueGetter\DottedObjectAccess;
@@ -13,9 +14,13 @@ class QueryBuilderFactory implements CollectionFactory
 
     protected $namer;
 
-    public function __construct(TitleIntrospector $namer)
+    protected $types;
+
+    public function __construct(TitleIntrospector $namer,
+                                TypeIntrospector $types)
     {
         $this->namer = $namer;
+        $this->types = $types;
     }
 
     /**
@@ -83,10 +88,15 @@ class QueryBuilderFactory implements CollectionFactory
         $rootModel = $builder->model();
 
         foreach ($columns as $columnName) {
+
             $column = Column::create()
                             ->setAccessor($columnName, $accessor)
                             ->setTitle($this->namer->keyTitle($rootModel, $columnName));
             $columnList->push($column);
+
+            if ($type = $this->types->keyType($rootModel, $columnName)) {
+                $column->setValueFormatter($type);
+            }
         }
 
         $collection->setColumns($columnList);
