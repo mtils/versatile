@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder as Query;
+use Versatile\Introspection\EloquentPathIntrospector;
 use UnderflowException;
 use App;
 
@@ -26,9 +28,19 @@ class Builder
 
     protected $joinAliases = [];
 
+    protected $joinMethods = [];
+
     protected $relationNs = 'Illuminate\Database\Eloquent\Relations\\';
 
     protected $columns;
+
+    protected $withs = [];
+
+    protected $wheres = [];
+
+    protected $whereIns = [];
+
+    protected $orderBys = [];
 
     protected $onlyQueryColumns = [];
 
@@ -36,10 +48,12 @@ class Builder
         $this->model = $model;
         $this->query = $model->newQuery();
         $this->parser = new DefaultParser;
+        $this->introspector = new EloquentPathIntrospector($this->parser);
     }
 
-    public function with($relations){
-        $this->query->with($relations);
+    public function with($relations)
+    {
+        $this->withs[] = $relations;
         return $this;
     }
 
@@ -48,70 +62,44 @@ class Builder
         $columns = is_array($column) ? $column : func_get_args();
 
         foreach ($columns as $column) {
-
             $this->columns[] = $column;
-
-            list($join, $column) = $this->toJoinAndKey($column);
-
-            if($join){
-                $this->with($join);
-                $this->addJoinOnce($this->model, $join);
-            }
         }
 
         return $this;
     }
 
-    public function withColumns($columns){
+    public function withColumns($columns, $clear=false)
+    {
+        if ($clear) {
+            $this->columns = [];
+        }
         return $this->withColumn($columns);
     }
 
     public function where($column, $operator = null, $value = null, $boolean = 'and'){
 
-        if($this->isRelatedKey($column)){
-
-            list($join, $property) = $this->toJoinAndKey($column);
-
-            if($join){
-
-                $this->addJoinOnce($this->model, $join);
-
-                $this->query->where($this->joinColumn($join, $property), $operator, $value, $boolean);
-
-            }
-
-        }
-        else{
-            $table = $this->model->getTable();
-            $this->query->where("$table.$column", $operator, $value, $boolean);
-
-        }
+        $this->wheres[] = [
+            'column'    => $column,
+            'operator'  => $operator,
+            'value'     => $value,
+            'boolean'   => $boolean
+        ];
 
         return $this;
+
     }
 
     public function whereIn($column, $values = null, $boolean = 'and', $not=false){
 
-        if($this->isRelatedKey($column)){
-
-            list($join, $property) = $this->toJoinAndKey($column);
-
-            if($join){
-
-                $this->addJoinOnce($this->model, $join);
-
-                $this->query->whereIn($this->joinColumn($join, $property), $values, $boolean, $not);
-
-            }
-
-        }
-        else{
-            $table = $this->model->getTable();
-            $this->query->whereIn("$table.$column", $values, $boolean, $not);
-
-        }
+        $this->whereIns[] = [
+            'column'    => $column,
+            'values'    => $values,
+            'boolean'   => $boolean,
+            'not'       => $not
+        ];
 
         return $this;
+
     }
 
     /**
@@ -136,24 +124,10 @@ class Builder
      */
     public function orderBy($column, $direction = 'asc'){
 
-        if($this->isRelatedKey($column)){
-
-            list($join, $property) = $this->toJoinAndKey($column);
-
-            if($join){
-
-                $this->addJoinOnce($this->model, $join);
-
-                $this->query->orderBy($this->joinColumn($join, $property), $direction);
-
-            }
-
-        }
-        else{
-            $table = $this->model->getTable();
-            $this->query->orderBy("$table.$column", $direction);
-
-        }
+        $this->orderBys[] = [
+            'column'    => $column,
+            'direction' => $direction
+        ];
 
         return $this;
 
@@ -166,7 +140,7 @@ class Builder
      * @return \Illuminate\Database\Query\Builder|static
      */
     public function skip($value){
-        $this->query->skip($value);
+        $this->buildQuery($this->getQueryColumns())->skip($value);
         return $this;
     }
 
@@ -177,7 +151,7 @@ class Builder
      * @return $this
      */
     public function limit($value){
-        $this->query->limit($value);
+        $this->buildQuery($this->getQueryColumns())->limit($value);
         return $this;
     }
 
@@ -237,7 +211,14 @@ class Builder
 
     public function getRelation($model, $name){
 
-        if(!method_exists($model, $name)){
+        if ($this->parser->isRelatedKey($name)) {
+            list($join, $key) = $this->parser->toJoinAndKey($name);
+            $class = $this->introspector->classOfPath($model, $join);
+            $model = new $class();
+            $name = $key;
+        }
+
+        if (!method_exists($model, $name)) {
             throw new UnderflowException("Method $name does not exists on model " . get_class($this->model));
         }
 
@@ -247,7 +228,145 @@ class Builder
 
     }
 
-    public function addJoinOnce($model, $name){
+    protected function addColumnsToQuery(Query $query, $columns)
+    {
+
+        $mainTable = $this->model->getTable();
+
+        foreach ($this->mergedQueryColumns() as $column) {
+
+            list($join, $column) = $this->toJoinAndKey($column);
+
+            if ($join && $join != $mainTable) {
+//                 echo "\nadding $join";
+                $query->with($join);
+                $this->addJoinOnce($query, $this->model, $join);
+            }
+        }
+    }
+
+    protected function addWithsToQuery(Query $query)
+    {
+        foreach ($this->withs as $relation) {
+            $query->with($relation);
+        }
+    }
+
+    protected function addWheresToQuery(Query $query)
+    {
+
+        $mainTable = $this->model->getTable();
+
+        foreach ($this->wheres as $where) {
+
+            $column     = $where['column'];
+            $operator   = $where['operator'];
+            $value      = $where['value'];
+            $boolean    = $where['boolean'];
+
+            if ($this->isRelatedKey($column)) {
+
+                list($join, $property) = $this->toJoinAndKey($column);
+
+                if($join){
+
+                    $this->addJoinOnce($query, $this->model, $join);
+
+                    $query->where($this->joinColumn($join, $property), $operator, $value, $boolean);
+
+                }
+
+            } else {
+                $query->where("$mainTable.$column", $operator, $value, $boolean);
+
+            }
+        }
+    }
+
+    protected function addWhereInsToQuery(Query $query)
+    {
+
+        foreach ($this->whereIns as $where) {
+
+            $column  = $where['column'];
+            $values  = $where['values'];
+            $boolean = $where['boolean'];
+            $not     = $where['not'];
+
+            if ($this->isRelatedKey($column)) {
+
+                list($join, $property) = $this->toJoinAndKey($column);
+
+                if ($join) {
+
+                    $this->addJoinOnce($query, $this->model, $join);
+
+                    $query->whereIn($this->joinColumn($join, $property), $values, $boolean, $not);
+
+                }
+
+            } else {
+                $table = $this->model->getTable();
+                $query->whereIn("$table.$column", $values, $boolean, $not);
+            }
+        }
+    }
+
+    protected function addOrderBysToQuery(Query $query)
+    {
+
+        foreach ($this->orderBys as $orderBy) {
+
+            $column = $orderBy['column'];
+            $direction = $orderBy['direction'];
+
+            if ($this->isRelatedKey($column)) {
+
+                list($join, $property) = $this->toJoinAndKey($column);
+
+                if($join){
+
+                    $this->addJoinOnce($query, $this->model, $join);
+
+                    $query->orderBy($this->joinColumn($join, $property), $direction);
+
+                }
+
+            }
+            else{
+                $table = $this->model->getTable();
+                $query->orderBy("$table.$column", $direction);
+
+            }
+
+        }
+
+    }
+
+    public function buildQuery(array $columns)
+    {
+
+        $this->joinClasses = [];
+        $this->joinTable = [];
+        $this->joinAliases = [];
+
+        $query = clone $this->query;
+
+        $this->addWithsToQuery($query);
+
+        $this->addColumnsToQuery($query, $columns);
+
+        $this->addWheresToQuery($query);
+
+        $this->addWhereInsToQuery($query);
+
+        $this->addOrderBysToQuery($query);
+
+        return $query;
+
+    }
+
+    public function addJoinOnce(Query $query, $model, $name){
 
         if (!isset($this->joinClasses[$name])) {
 
@@ -259,14 +378,14 @@ class Builder
             switch ($relationClass) {
 
                 case "{$ns}BelongsTo":
-                    $this->applyBelongsTo($model, $relation, $name);
+                    $this->applyBelongsTo($query, $model, $relation, $name);
                     break;
 
                 case "{$ns}HasOne":
-                    $this->applyHasOne($model, $relation, $name);
+                    $this->applyHasOne($query, $model, $relation, $name);
                     break;
                 case "{$ns}BelongsToMany":
-                    $this->applyBelongsToMany($model, $relation, $name);
+                    $this->applyBelongsToMany($query, $model, $relation, $name);
                     break;
                 default:
                     throw new UnderflowException('Currently only BelongsTo and HasOne is supported');
@@ -276,7 +395,7 @@ class Builder
 
     }
 
-    protected function applyBelongsTo(Model $model, BelongsTo $belongsTo, $name){
+    protected function applyBelongsTo(Query $query, Model $model, BelongsTo $belongsTo, $name){
 
         if(isset($this->joinClasses[$name])){
             return;
@@ -290,8 +409,10 @@ class Builder
 
         $alias = $this->joinNameToAlias($name);
 
-        $this->query->join("$relatedTable AS $alias", "$modelTable.$foreignKey",'=',"$alias.$otherKey");
-        $this->query->distinct();
+        $joinMethod = $this->getJoinMethod($name);
+
+        $query->{$joinMethod}("$relatedTable AS $alias", "$modelTable.$foreignKey",'=',"$alias.$otherKey");
+        $query->distinct();
 
         $this->addQueryColumn($foreignKey);
 
@@ -301,7 +422,7 @@ class Builder
 
     }
 
-    protected function applyHasOne(Model $model, HasOne $hasOne, $name){
+    protected function applyHasOne(Query $query, Model $model, HasOne $hasOne, $name){
 
         if(isset($this->joinClasses[$name])){
             return;
@@ -311,12 +432,25 @@ class Builder
         $related = $hasOne->getRelated();
         $relatedTable = $related->getTable();
         $foreignKey = $hasOne->getPlainForeignKey();
+
         $qualifiedLocalKey = $hasOne->getQualifiedParentKeyName();
+        list($parentTable, $localKey) = explode('.', $qualifiedLocalKey);
+
+        if ($this->parser->isRelatedKey($name)) {
+            list($parentPath, $key) = $this->parser->toJoinAndKey($name);
+            $this->addJoinOnce($query, $this->model, $parentPath);
+            $qualifiedLocalKey = $this->joinAliases[$parentPath] . ".$localKey";
+        }
+        else {
+            $qualifiedLocalKey = $hasOne->getQualifiedParentKeyName();
+        }
 
         $alias = $this->joinNameToAlias($name);
 
-        $this->query->join("$relatedTable AS $alias", "$qualifiedLocalKey",'=',"$alias.$foreignKey");
-        $this->query->distinct();
+        $joinMethod = $this->getJoinMethod($name);
+
+        $query->{$joinMethod}("$relatedTable AS $alias", "$qualifiedLocalKey",'=',"$alias.$foreignKey");
+        $query->distinct();
 
         $this->joinClasses[$name] = $hasOne->getRelated();
         $this->joinTable[$name] = $relatedTable;
@@ -324,7 +458,7 @@ class Builder
 
     }
 
-    protected function applyBelongsToMany(Model $model, BelongsToMany $belongsToMany, $name){
+    protected function applyBelongsToMany(Query $query, Model $model, BelongsToMany $belongsToMany, $name){
 
         if(isset($this->joinClasses[$name])){
             return;
@@ -342,9 +476,11 @@ class Builder
 
         $alias = $this->joinNameToAlias($name);
 
-        $this->query->join("$pivotTable", "$qualifiedLocalKey",'=',"$foreignKey");
-        $this->query->join("$relatedTable AS $alias", "$relatedTable.$relationKey",'=',"$pivotLocalKey");
-        $this->query->distinct();
+        $joinMethod = $this->getJoinMethod($name);
+
+        $query->{$joinMethod}("$pivotTable", "$qualifiedLocalKey",'=',"$foreignKey");
+        $query->{$joinMethod}("$relatedTable AS $alias", "$relatedTable.$relationKey",'=',"$pivotLocalKey");
+        $query->distinct();
 
         $this->joinClasses[$name] = $related;
         $this->joinTable[$name] = $relatedTable;
@@ -374,6 +510,7 @@ class Builder
         $queryColumns = [];
 
         $knownColumns = $this->mergedQueryColumns();
+
 
         $table = $this->model->getTable();
 
@@ -411,6 +548,40 @@ class Builder
         return $queryColumns;
     }
 
+    public function leftJoinOn($path)
+    {
+        $this->joinMethods[$path] = 'left';
+        return $this;
+    }
+
+    public function rightJoinOn($path)
+    {
+        $this->joinMethods[$path] = 'right';
+        return $this;
+    }
+
+    public function outerJoinOn($path)
+    {
+        $this->joinMethods[$path] = 'outer';
+        return $this;
+    }
+
+    public function innerJoinOn($path)
+    {
+        $this->joinMethods[$path] = 'outer';
+        return $this;
+    }
+
+    public function getJoinMethod($path)
+    {
+        if (!isset($this->joinMethods[$path])) {
+            return 'join';
+        }
+
+        return $this->joinMethods[$path] . 'Join';
+
+    }
+
     public function addQueryColumn($column)
     {
         $this->onlyQueryColumns[] = $column;
@@ -428,9 +599,22 @@ class Builder
      * @param  array  $columns
      * @return \Illuminate\Database\Eloquent\Model|static|null
      */
-    public function find($id, $columns = array('*')){
-        $columns = (func_num_args() > 1) ? $columns : $this->getQueryColumns();
-        return $this->query->find($id, $columns);
+    public function find($id, $columns = array('*'))
+    {
+
+        $columnsPassed = (func_num_args() > 1);
+
+        $columns = $columnsPassed ? $columns : $this->getQueryColumns();
+
+        $query = $this->buildQuery($columns);
+
+        if ($columnsPassed) {
+            return $query->find($id, $columns);
+        }
+
+        // addJoinOnce adds queryColumns again...
+        return $query->find($id, $this->getQueryColumns());
+
     }
 
     /**
@@ -442,8 +626,20 @@ class Builder
      */
     public function findMany($id, $columns = array('*'))
     {
-        $columns = (func_num_args() > 1) ? $columns : $this->getQueryColumns();
-        return $this->query->findMany($id, $columns);
+
+        $columnsPassed = (func_num_args() > 1);
+
+        $columns = $columnsPassed ? $columns : $this->getQueryColumns();
+
+        $query = $this->buildQuery($columns);
+
+        if ($columnsPassed) {
+            return $query->findMany($id, $columns);
+        }
+
+        // addJoinOnce adds queryColumns again...
+        return $query->findMany($id, $this->getQueryColumns());
+
     }
 
     /**
@@ -455,9 +651,22 @@ class Builder
      *
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
-    public function findOrFail($id, $columns = array('*')){
-        $columns = (func_num_args() > 1) ? $columns : $this->getQueryColumns();
-        return $this->query->findOrFail($id, $columns);
+    public function findOrFail($id, $columns = array('*'))
+    {
+
+        $columnsPassed = (func_num_args() > 1);
+
+        $columns = $columnsPassed ? $columns : $this->getQueryColumns();
+
+        $query = $this->buildQuery($columns);
+
+        if ($columnsPassed) {
+            return $query->findOrFail($id, $columns);
+        }
+
+        // addJoinOnce adds queryColumns again...
+        return $query->findOrFail($id, $this->getQueryColumns());
+
     }
 
     /**
@@ -468,8 +677,20 @@ class Builder
      */
     public function first($columns = array('*'))
     {
-        $columns = (func_num_args() > 0) ? $columns : $this->getQueryColumns();
-        return $this->query->first($columns);
+
+        $columnsPassed = (func_num_args() > 1);
+
+        $columns = $columnsPassed ? $columns : $this->getQueryColumns();
+
+        $query = $this->buildQuery($columns);
+
+        if ($columnsPassed) {
+            return $query->first($columns);
+        }
+
+        // addJoinOnce adds queryColumns again...
+        return $query->first($this->getQueryColumns());
+
     }
 
     /**
@@ -482,8 +703,20 @@ class Builder
      */
     public function firstOrFail($columns = array('*'))
     {
-        $columns = (func_num_args() > 0) ? $columns : $this->getQueryColumns();
-        return $this->query->firstOrFail($columns);
+
+        $columnsPassed = (func_num_args() > 1);
+
+        $columns = $columnsPassed ? $columns : $this->getQueryColumns();
+
+        $query = $this->buildQuery($columns);
+
+        if ($columnsPassed) {
+            return $query->firstOrFail($columns);
+        }
+
+        // addJoinOnce adds queryColumns again...
+        return $query->firstOrFail($this->getQueryColumns());
+
     }
 
     /**
@@ -492,9 +725,22 @@ class Builder
      * @param  array  $columns
      * @return \Illuminate\Database\Eloquent\Collection|static[]
      */
-    public function get($columns = array('*')){
-        $columns = (func_num_args() > 0) ? $columns : $this->getQueryColumns();
-        return $this->query->get($columns);
+    public function get($columns = array('*'))
+    {
+
+        $columnsPassed = (func_num_args() > 1);
+
+        $columns = $columnsPassed ? $columns : $this->getQueryColumns();
+
+        $query = $this->buildQuery($columns);
+
+        if ($columnsPassed) {
+            return $query->get($columns);
+        }
+
+        // addJoinOnce adds queryColumns again...
+        return $query->get($this->getQueryColumns());
+
     }
 
     /**
@@ -505,7 +751,7 @@ class Builder
      */
     public function pluck($column)
     {
-        return $this->query->pluck($column);
+        return $this->buildQuery([$column])->pluck($column);
     }
 
     /**
@@ -517,7 +763,7 @@ class Builder
      */
     public function chunk($count, callable $callback){
 
-        return $this->query->chunk($count, $callback);
+        return $this->buildQuery($this->getQueryColumns())->chunk($count, $callback);
     }
 
     /**
@@ -528,7 +774,7 @@ class Builder
      * @return array
      */
     public function lists($column, $key = null){
-        return $this->query->lists($column, $key);
+        return $this->buildQuery([$column])->lists($column, $key);
     }
 
     /**
@@ -538,9 +784,22 @@ class Builder
      * @param  array  $columns
      * @return \Illuminate\Pagination\Paginator
      */
-    public function paginate($perPage = null, $columns = array('*')){
-        $columns = (func_num_args() > 1) ? $columns : $this->getQueryColumns();
-        return $this->query->paginate($perPage, $columns);
+    public function paginate($perPage = null, $columns = array('*'))
+    {
+
+        $columnsPassed = (func_num_args() > 1);
+
+        $columns = $columnsPassed ? $columns : $this->getQueryColumns();
+
+        $query = $this->buildQuery($columns);
+
+        if ($columnsPassed) {
+            return $query->paginate($perPage, $columns);
+        }
+
+        // addJoinOnce adds queryColumns again...
+        return $query->paginate($perPage, $this->getQueryColumns());
+
     }
 
     /**
@@ -552,12 +811,26 @@ class Builder
      * @param  array  $columns
      * @return \Illuminate\Pagination\Paginator
      */
-    public function simplePaginate($perPage = null, $columns = array('*')){
-        return $this->query->simplePaginate($perPage, $columns);
+    public function simplePaginate($perPage = null, $columns = array('*'))
+    {
+
+        $columnsPassed = (func_num_args() > 1);
+
+        $columns = $columnsPassed ? $columns : $this->getQueryColumns();
+
+        $query = $this->buildQuery($columns);
+
+        if ($columnsPassed) {
+            return $query->simplePaginate($perPage, $columns);
+        }
+
+        // addJoinOnce adds queryColumns again...
+        return $query->simplePaginate($perPage, $this->getQueryColumns());
+
     }
 
     public function toSql(){
-        return $this->query->toSql();
+        return $this->buildQuery($this->getQueryColumns())->toSql();
     }
 
     public function model()
