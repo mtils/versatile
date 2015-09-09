@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @see \Illuminate\Foundation\Application
+ * @see \Versatile\View\Contracts\CollectionFactory
  */
 class Listing extends Facade
 {
