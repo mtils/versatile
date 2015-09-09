@@ -33,6 +33,7 @@ class VersatileServiceProvider extends ServiceProvider {
         $this->registerTypeIntrospector();
         $this->registerViewCollectionFactory();
         $this->registerBuilderViewCollectionFactory();
+        $this->registerModelPresenter();
     }
 
     protected function registerSyntaxParser()
@@ -99,7 +100,7 @@ class VersatileServiceProvider extends ServiceProvider {
             'Versatile\View\Contracts\CollectionFactory'
         );
 
-        $this->app->singleton('versatile.view-collection-factory',function($app){
+        $this->app->singleton('versatile.view-collection-factory',function($app) {
             $factory = $app->make('Versatile\View\CollectionFactoryChain');
             $factory->setEventBus(new IlluminateBus($app['events']));
             return $factory;
@@ -110,8 +111,46 @@ class VersatileServiceProvider extends ServiceProvider {
     protected function registerBuilderViewCollectionFactory()
     {
 
-        $this->app['events']->listen('collection-factory.load', function($factory){
+        $this->app['events']->listen('collection-factory.load', function($factory) {
             $factory->add($this->app->make('Versatile\View\QueryBuilderFactory'));
+        });
+
+    }
+
+    protected function registerModelPresenter()
+    {
+
+        $this->app->alias(
+            'versatile.model-presenter',
+            'Versatile\View\Contracts\ModelPresenter'
+        );
+
+        $this->app->singleton('versatile.model-presenter', function($app) {
+            return $app->make('Versatile\View\ModelPresenterRegistry');
+        });
+
+        $this->app->resolving('versatile.model-presenter', function($presenter) {
+
+            $presenter->provideId('Illuminate\Database\Eloquent\Model', function($object){
+                return $object->getKey();
+            });
+
+            $presenter->provideShortName('Illuminate\Database\Eloquent\Model', function($object, $view){
+
+                if (method_exists($object, 'shortName')) {
+                    return $object->shortName($view);
+                }
+
+                if (isset($object->title)) {
+                    return $object->title;
+                }
+
+                if (isset($object->name)) {
+                    return $object->name;
+                }
+
+                return class_basename($object) . ' #' .  $object->getKey();
+            });
         });
 
     }
