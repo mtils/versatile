@@ -2,35 +2,44 @@
 
 /**
  *  A Search object is a proxy object between typically your controller
- *  and your view. It accepts parameters and is responsible to cast, rename, ...
- *  them. A Search should not be performed before get() or paginate was called
- *  Its the best to get the results later. Than you have a chance to output the
- *  Result in different formats (like excel)
- **/
-interface Search
+ *  and your view. It assures that you do not put this logic into your 
+controller.
+ * A search object should never perform anything before get() or paginate() is
+ * called. So you can pass the whole search object to your view and the view
+ * will deceide which method will be called. (Autocompleters, Search Pages,
+ * REST Interfaces can share the controllers this way)
+ *
+ * The intended sequence by the interfaces is:
+ *
+ * $criteria = CriteriaBuilder::criteria(Request::instance());
+ * $search = SearchFactory::search($criteria);
+ * $result = $search->get();
+ *
+ * The responsability of the CriteriaBuilder is: Build a criteria from some
+ * input. (One builder for user filled forms, another one for apis,...)
+ * The CriteriaBuilder casts all values to application usable types like
+ * DateTime objects and floats instead of strings.
+ *
+ * SearchFactory: Create the right Search Object for a criteria
+ *
+ * Search: Take the (uniformed and every time same looking) criteria
+ * objects and control a querybuilder or something similar to perform get its
+ * results.
+ *
+ * The criteria objects should be serializable to store searches
+ *
+ *
+**/
+interface Search extends Queryable, Sortable, HoldsColumns
 {
 
-    /**
-     * Return the (casted|renamed) parameters
-     *
-     * @return array
-     **/
-    public function getParams();
-
-    /**
-     * Set the search parameter. Contains all it needs: filters, order, page,..
-     *
-     * @param array $params
-     * @return static
-     **/
-    public function setParams(array $params);
 
     /**
      * Get the complete result without pagination
      *
      * @return \Traversable
      **/
-    public function get();
+    public function get($columns=[]);
 
     /**
      * Get the paginated result
@@ -38,7 +47,7 @@ interface Search
      * @param $perPage (optional)
      * @return \Traversable
      **/
-    public function paginate($perPage = null);
+    public function paginate($columns=[], $perPage = null);
 
     /**
      * Return the root model class name, so that types, titles, etc. can be
@@ -47,13 +56,5 @@ interface Search
      * @return string
      **/
     public function modelClass();
-
-    /**
-     * Return an array of column names. Names have to be the plain
-     * (not readable) Model keys
-     *
-     * @return array
-     **/
-    public function columnNames();
 
 }

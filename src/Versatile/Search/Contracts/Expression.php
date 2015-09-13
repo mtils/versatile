@@ -9,4 +9,6 @@ interface Expression
 
     public function value();
 
+    public function bool();
+
 }

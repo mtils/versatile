@@ -3,7 +3,7 @@
 use IteratorAggregate;
 use Countable;
 
-interface Filter extends Countable, IteratorAggregate
+interface Filter extends Queryable, Countable, IteratorAggregate
 {
 
     public function add(Expression $e);
