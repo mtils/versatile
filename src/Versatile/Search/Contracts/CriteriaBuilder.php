@@ -6,17 +6,11 @@ interface CriteriaBuilder
     /**
      * Build a criteria for $request. Request can be anything
      *
-     * @param mixed $request
+     * @param string $modelClass
+     * @param array $parameters
+     * @param string $contentType (optional)
      * @return Versatile\Search\Contracts\Criteria
      **/
-    public function criteria($request);
-
-    /**
-     * Dependency chain method
-     *
-     * @param mixed $request
-     * @return bool
-     **/
-    public function canHandle($request);
+    public function criteria($modelClass, array $parameters, $contentType='text/html');
 
 }

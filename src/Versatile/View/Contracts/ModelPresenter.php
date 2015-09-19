@@ -43,6 +43,13 @@ interface ModelPresenter
     const VIEW_PREVIEW = 'preview';
 
     /**
+     * Searchable keys in fulltext search
+     *
+     * @var string
+     **/
+    const VIEW_FULLTEXT = 'fulltext';
+
+    /**
      * Returns an id for object $object. Makes it easier to populate inputs
      *
      * @param object $object

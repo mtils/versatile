@@ -1,6 +1,6 @@
 <?php namespace Versatile\Query;
 
-use Versatile\Query\Contracts\SyntaxParser;
+use Versatile\Query\Contracts\SyntaxParser as Parser;
 use Versatile\Query\SyntaxParser as DefaultParser;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -203,7 +203,7 @@ class Builder
         return $this->parser;
     }
 
-    public function setParser(SyntaxParser $parser)
+    public function setParser(Parser $parser)
     {
         $this->parser = $parser;
         return $this;
@@ -537,7 +537,7 @@ class Builder
     public function mergedQueryColumns()
     {
 
-        $queryColumns = $this->columns;
+        $queryColumns = (array)$this->columns;
 
         foreach ($this->onlyQueryColumns as $column) {
             if (!in_array($column, $queryColumns)) {
@@ -734,12 +734,16 @@ class Builder
 
         $query = $this->buildQuery($columns);
 
-        if ($columnsPassed) {
-            return $query->get($columns);
+        if (!$columnsPassed) {
+            // addJoinOnce adds queryColumns again...
+            return $query->get($this->getQueryColumns());
         }
 
-        // addJoinOnce adds queryColumns again...
-        return $query->get($this->getQueryColumns());
+        if (!$columns) {
+            return $query->get();
+        }
+
+        return $query->get($columns);
 
     }
 

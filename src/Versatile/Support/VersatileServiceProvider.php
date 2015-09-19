@@ -34,6 +34,8 @@ class VersatileServiceProvider extends ServiceProvider {
         $this->registerViewCollectionFactory();
         $this->registerBuilderViewCollectionFactory();
         $this->registerModelPresenter();
+        $this->registerCriteriaBuilder();
+        $this->registerSearchFactory();
     }
 
     protected function registerSyntaxParser()
@@ -113,6 +115,7 @@ class VersatileServiceProvider extends ServiceProvider {
 
         $this->app['events']->listen('collection-factory.load', function($factory) {
             $factory->add($this->app->make('Versatile\View\QueryBuilderFactory'));
+            $factory->add($this->app->make('Versatile\View\SearchFactory'));
         });
 
     }
@@ -150,6 +153,45 @@ class VersatileServiceProvider extends ServiceProvider {
                 }
 
                 return class_basename($object) . ' #' .  $object->getKey();
+            });
+        });
+
+    }
+
+    protected function registerCriteriaBuilder()
+    {
+        $this->app->alias(
+            'versatile.criteria-builder',
+            'Versatile\Search\Contracts\CriteriaBuilder'
+        );
+
+        $this->app->singleton('versatile.criteria-builder', function($app) {
+            return $app->make('Versatile\Search\FlatCriteriaBuilder');
+        });
+    }
+
+    protected function registerSearchFactory()
+    {
+        $this->app->alias(
+            'versatile.search-factory',
+            'Versatile\Search\Contracts\SearchFactory'
+        );
+
+        $this->app->singleton('versatile.search-factory', function($app) {
+            return $app->make('Versatile\Search\ProxySearchFactory');
+        });
+
+        $this->app->resolving('versatile.search-factory', function($factory) {
+            return $factory->forModelClass('Illuminate\Database\Eloquent\Model', function($criteria) {
+
+                $modelClass = $criteria->modelClass();
+
+                $builder = $this->app->make('Versatile\Query\Builder', [new $modelClass]);
+
+                return $this->app->make('Versatile\Search\BuilderSearch',[
+                    $builder,
+                    $criteria
+                ]);
             });
         });
 

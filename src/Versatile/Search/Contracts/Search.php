@@ -30,24 +30,26 @@ controller.
  *
  *
 **/
-interface Search extends Queryable, Sortable, HoldsColumns
+interface Search extends Queryable, Sortable, HoldsKeys
 {
 
 
     /**
      * Get the complete result without pagination
      *
+     * @param $keys (optional)
      * @return \Traversable
      **/
-    public function get($columns=[]);
+    public function get($keys=[]);
 
     /**
      * Get the paginated result
      *
+     * @param array $keys (optional)
      * @param $perPage (optional)
      * @return \Traversable
      **/
-    public function paginate($columns=[], $perPage = null);
+    public function paginate($keys=[], $perPage = null);
 
     /**
      * Return the root model class name, so that types, titles, etc. can be
@@ -56,5 +58,12 @@ interface Search extends Queryable, Sortable, HoldsColumns
      * @return string
      **/
     public function modelClass();
+
+    /**
+     * Returns the criteria object
+     *
+     * @return \Versatile\Search\Contracts\Criteria
+     */
+    public function criteria();
 
 }

@@ -4,25 +4,13 @@
 namespace Versatile\View;
 
 use Versatile\View\Contracts\ModelPresenter;
+use Collection\Support\FindsCallableByInheritance;
 use ReflectionClass;
 
 class ModelPresenterRegistry implements ModelPresenter
 {
 
-    protected $idProviders = [];
-
-    protected $shortNameProviders = [];
-
-    protected $keyProviders = [];
-
-    protected $searchableKeyProviders = [];
-
-    protected $cache = [
-        'id'                => [],
-        'shortName'         => [],
-        'keys'              => [],
-        'searchableKeys'    => []
-    ];
+    use FindsCallableByInheritance;
 
     /**
      * {@inheritdoc}
@@ -32,7 +20,7 @@ class ModelPresenterRegistry implements ModelPresenter
      **/
     public function id($object)
     {
-        if ($provider = $this->nearestForClass('id', get_class($object))) {
+        if ($provider = $this->nearestForClass(get_class($object), 'id')) {
             return call_user_func($provider, $object);
         }
         return '';
@@ -47,7 +35,7 @@ class ModelPresenterRegistry implements ModelPresenter
      **/
     public function shortName($object, $view=self::VIEW_DEFAULT)
     {
-        if ($provider = $this->nearestForClass('shortName', get_class($object))) {
+        if ($provider = $this->nearestForClass(get_class($object), 'shortName')) {
             return call_user_func($provider, $object, $view);
         }
         return '';
@@ -62,7 +50,7 @@ class ModelPresenterRegistry implements ModelPresenter
      **/
     public function keys($class, $view=self::VIEW_DEFAULT)
     {
-        if ($provider = $this->nearestForClass('keys', $class)) {
+        if ($provider = $this->nearestForClass($class, 'keys')) {
             return call_user_func($provider, $class, $view);
         }
         return [];
@@ -77,117 +65,62 @@ class ModelPresenterRegistry implements ModelPresenter
      **/
     public function searchableKeys($class, $view=self::VIEW_DEFAULT)
     {
-        if ($provider = $this->nearestForClass('searchableKeys', $class)) {
+        if ($provider = $this->nearestForClass($class, 'searchableKeys')) {
             return call_user_func($provider, $class, $view);
         }
         return [];
     }
 
+    /**
+     * Add a callable which will handling getting the id for class $class
+     *
+     * @param string $class
+     * @param callable $provider
+     * @return self
+     **/
     public function provideId($class, callable $provider)
     {
-        $this->idProviders[$class] = $provider;
+        $this->addCallable($class, $provider, 'id');
         return $this;
     }
 
+    /**
+     * Add a callable which will handling getting the shortName for class $class
+     *
+     * @param string $class
+     * @param callable $provider
+     * @return self
+     **/
     public function provideShortName($class, callable $provider)
     {
-        $this->shortNameProviders[$class] = $provider;
+        $this->addCallable($class, $provider, 'shortName');
         return $this;
     }
 
+    /**
+     * Add a callable which will handling getting the keys for class $class
+     *
+     * @param string $class
+     * @param callable $provider
+     * @return self
+     **/
     public function provideKeys($class, callable $provider)
     {
-        $this->keyProviders[$class] = $provider;
+        $this->addCallable($class, $provider, 'keys');
         return $this;
     }
 
+    /**
+     * Add a callable which will handling getting the searchableKeys for $class
+     *
+     * @param string $class
+     * @param callable $provider
+     * @return self
+     **/
     public function provideSearchableKeys($class, callable $provider)
     {
-        $this->searchableKeyProviders[$class] = $provider;
+        $this->addCallable($class, $provider, 'searchableKeys');
         return $this;
-    }
-
-    protected function nearestForClass($type, $findClass)
-    {
-
-        if (isset($this->cache[$type][$findClass])) {
-            return $this->cache[$type][$findClass];
-        }
-
-        $providers = $this->providers($type);
-
-        if (!$nearest = $this->findNearestForClass($providers, $findClass)) {
-            return;
-        }
-
-        $this->cache[$type][$findClass] = $nearest;
-
-        return $nearest;
-
-    }
-
-    protected function &providers($type)
-    {
-
-        switch ($type) {
-            case 'id':
-                return $this->idProviders;
-            case 'shortName':
-                return $this->shortNameProviders;
-            case 'keys':
-                return $this->keyProviders;
-            case 'searchableKeys':
-                return $this->searchableKeyProviders;
-        }
-
-    }
-
-    protected function findNearestForClass(&$providers, $findClass)
-    {
-        $all = $this->findAllForClass($providers, $findClass);
-
-        if (!count($all)) {
-            return;
-        }
-
-        if (count($all) == 1) {
-            return array_values($all)[0];
-        }
-
-        foreach (static::classInheritance($findClass) as $parentClass) {
-            if (isset($all[$parentClass]) ) {
-                return $all[$parentClass];
-            }
-        }
-
-    }
-
-    protected function findAllForClass(&$providers, $findClass)
-    {
-
-        $all = [];
-
-        foreach ($providers as $class=>$provider) {
-            if (is_subclass_of($findClass, $class) || $findClass == $class) {
-                $all[$class] = $provider;
-            }
-        }
-
-        return $all;
-
-    }
-
-    protected static function classInheritance($object){
-
-        $class = new ReflectionClass($object);
-        $classNames = [$class->getName()];
-
-        while($class = $class->getParentClass()){
-            $classNames[] = $class->getName();
-        }
-
-        return $classNames;
-
     }
 
 }
