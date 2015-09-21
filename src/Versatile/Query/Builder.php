@@ -401,7 +401,21 @@ class Builder
             return;
         }
 
-        $modelTable = $model->getTable();
+        $modelTable = '';
+
+        // If the table has already an alias
+        if (str_contains($name, '.')) {
+            $path = explode('.', $name);
+            array_pop($path);
+            $parentPath = implode('.', $path);
+            if (isset($this->joinAliases[$parentPath])) {
+                $modelTable = $this->joinAliases[$parentPath];
+            }
+        }
+
+        if (!$modelTable) {
+            $modelTable = $belongsTo->getParent()->getTable();
+        }
         $related = $belongsTo->getRelated();
         $relatedTable = $related->getTable();
         $foreignKey = $belongsTo->getForeignKey();
@@ -414,7 +428,7 @@ class Builder
         $query->{$joinMethod}("$relatedTable AS $alias", "$modelTable.$foreignKey",'=',"$alias.$otherKey");
         $query->distinct();
 
-        $this->addQueryColumn($foreignKey);
+        $this->addQueryColumn("$modelTable.$foreignKey");
 
         $this->joinClasses[$name] = $belongsTo->getRelated();
         $this->joinTable[$name] = $relatedTable;
