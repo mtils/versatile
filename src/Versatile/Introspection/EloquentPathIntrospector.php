@@ -6,6 +6,7 @@ use Versatile\Query\SyntaxParser as DefaultParser;
 use BadMethodCallException;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use UnexpectedValueException;
+use ReflectionMethod;
 
 class EloquentPathIntrospector implements PathIntrospector
 {
@@ -62,6 +63,14 @@ class EloquentPathIntrospector implements PathIntrospector
             if(!$methodName){
                 continue;
             }
+
+            $reflectionMethod = new ReflectionMethod($currentObject, $methodName);
+
+            if ($reflectionMethod->isStatic() || !$reflectionMethod->isPublic() ||
+                $reflectionMethod->isAbstract()) {
+                continue;
+            }
+
 
             $relation = $currentObject->{$methodName}();
 
