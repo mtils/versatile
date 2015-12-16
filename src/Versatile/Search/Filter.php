@@ -117,7 +117,7 @@ class Filter implements FilterContract
         }
 
         try {
-            return is_int($this->indexOfColumn($indexOfColumn));
+            return is_int($this->indexOfColumn($indexOrColumn));
         } catch (OutOfBoundsException $e) {
             return false;
         }
@@ -179,7 +179,7 @@ class Filter implements FilterContract
                 return $index;
             }
         }
-        throw new OutOfBoundsException("Key $key not found in filter");
+        throw new OutOfBoundsException("Column $column not found in filter");
     }
 
     /**
