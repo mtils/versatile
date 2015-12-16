@@ -101,7 +101,9 @@ class BuilderSearch implements Search
     protected function appendSortingToBuilder()
     {
         foreach ($this->criteria->sorting() as $key=>$direction) {
-            $this->builder->orderBy($key, $direction);
+            if (trim($key) != '') {
+                $this->builder->orderBy($key, $direction);
+            }
         }
     }
 }
