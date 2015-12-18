@@ -53,7 +53,12 @@ class Builder
 
     public function with($relations)
     {
-        $this->withs[] = $relations;
+
+        if (is_string($relations)) {
+            $relations = func_get_args();
+        }
+
+        $this->withs = array_merge($this->withs, $relations);
         return $this;
     }
 
