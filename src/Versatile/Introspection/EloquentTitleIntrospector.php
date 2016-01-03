@@ -26,9 +26,14 @@ class EloquentTitleIntrospector implements TitleIntrospector
 
     protected $manualObjectTitles = [];
 
+    protected $namespaces = [];
+
+    protected $modelToLangName = [];
+
     public function __construct(Translator $translator,
                                 PathIntrospector $introspector,
-                                SyntaxParser $parser){
+                                SyntaxParser $parser)
+    {
         $this->translator = $translator;
         $this->pathIntrospector = $introspector;
         $this->parser = $parser;
@@ -100,9 +105,12 @@ class EloquentTitleIntrospector implements TitleIntrospector
      * @param int $quantity (optional) The quantity (for singular/plural)
      * @return string A readable title of this object
      **/
-    public function objectTitle($class, $quantity=1){
-        $langKey = $this->model2LangKey($this->getClassName($class));
-        return $this->translator->choice("{$this->baseLangKey}.$langKey.name",$quantity);
+    public function objectTitle($class, $quantity=1)
+    {
+        return $this->translator->choice(
+            $this->langKeyPrefix($class).".name",
+            $quantity
+        );
     }
 
     /**
@@ -113,50 +121,86 @@ class EloquentTitleIntrospector implements TitleIntrospector
      * @param string An enum value. Preferable strings to allow easy translations
      * @return string A readable title of this enum value
      **/
-    public function enumTitle($class, $path, $value){
-
-        $langClass = $this->model2LangKey($class);
-        $langKey = "{$this->baseLangKey}.$langClass.enums.$path.$value";
-
-        return $this->translator->get($langKey);
-
+    public function enumTitle($class, $path, $value)
+    {
+        return $this->translator->get(
+            $this->langKeyPrefix($class).".enums.$path.$value"
+        );
     }
 
-    public function model2LangKey($modelName){
-        $matches = array();
+    /**
+     * Returns the langClassName of $modelName
+     *
+     * @param string $modelName
+     * @return string
+     **/
+    public function model2LangKey($modelName)
+    {
+
+        if (isset($this->modelToLangName[$modelName])) {
+            return $this->modelToLangName[$modelName];
+        }
+
+        $matches = [];
+
         if (preg_match('@\\\\([\w]+)$@', $modelName, $matches)) {
             $modelName = $matches[1];
         }
+
         return snake_case($modelName);
     }
 
+    /**
+     * Returns the translation key for the keyTitle translation
+     *
+     * @param string $className
+     * @param string $key
+     * @return string
+     **/
     public function key2QualifiedLangKey($className, $key)
     {
-        $langClass = $this->model2LangKey($className);
-        return "{$this->baseLangKey}.$langClass.fields.$key";
+        return $this->langKeyPrefix($className) . ".fields.$key";
     }
 
-    protected function getClassName($class){
-        if(is_object($class)){
-            return get_class($class);
-        }
-        else{
-            return $class;
-        }
-    }
-
-    public function getManualObjectTitle($class,$quantity=1){
-        if(isset($this->manualObjectTitles[$class])){
+    /**
+     * Returns the manually setted objectTitle
+     * @see self::setObjectTitle
+     *
+     * @param string $class
+     * @param int $quantity
+     * @return string|null
+     **/
+    public function getManualObjectTitle($class, $quantity=1)
+    {
+        if(isset($this->manualObjectTitles[$class])) {
             return $this->manualObjectTitles[$class];
         }
     }
 
-    public function setObjectTitle($class, $title, $quantity=1){
+    /**
+     * Set a manual object title. Bypasses all internal handling. You have to
+     * handle translations yourself
+     *
+     * @param string $class
+     * @param string $title
+     * @param int $quantity (optional)
+     * @return self
+     **/
+    public function setObjectTitle($class, $title, $quantity=1)
+    {
         $this->manualObjectTitles[$class] = $title;
         return $this;
     }
 
-    public function getManualKeyTitle($class, $column){
+    /**
+     * Return a manually overwritten title for $class->$column
+     *
+     * @param string $class
+     * @param string $column
+     * @return string
+     **/
+    public function getManualKeyTitle($class, $column)
+    {
 
         $this->fireOnce('title-introspector.load',[$this]);
 
@@ -166,12 +210,99 @@ class EloquentTitleIntrospector implements TitleIntrospector
         }
     }
 
-    public function setKeyTitle($class, $column, $title){
+    /**
+     * Set a manual key title. Overwrites the translated titles, so you have to
+     * handle translation yourself
+     *
+     * @param string|object $class
+     * @param string $column
+     * @param string $title
+     * @return self
+     **/
+    public function setKeyTitle($class, $column, $title)
+    {
 
         $class = ltrim($this->getClassName($class),'\\');
         $this->manualKeyTitles[$class.'|'.$column] = $title;
         return $this;
 
+    }
+
+    /**
+     * Return the namespace for class with $langClassName
+     * @see self::setLangNameSpace
+     *
+     * @param string
+     * @return string
+     **/
+    public function getLangNamespace($langClassName)
+    {
+        return isset($this->namespaces[$langClassName]) ? $this->namespaces[$langClassName] : '';
+    }
+
+    /**
+     * Set a namespace for a _langClassName_. So you can prefix project with
+     * your project package prefix. setLangNameSpace('project', 'projects')
+     * The resulting key will be "projects::project.models"
+     *
+     * @param string $langClassName
+     * @param string $namespace (Without colons)
+     * @return self
+     **/
+    public function setLangNameSpace($langClassName, $namespace)
+    {
+        $this->namespaces[$langClassName] = $namespace;
+        return $this;
+    }
+
+    /**
+     * Manually map a class to a model name. This is needed if you overwrite
+     * a class like User to ExtendedUser. So instead of copying your lang entry
+     * for extended_user you can map App\ExtendedUser to user
+     *
+     * @param string $modelName The classname you want to map
+     * @param string $langName The name of that class inside lang files
+     * @return void
+     **/
+    public function mapModelToLangName($modelName, $langName)
+    {
+        $modelName = $this->getClassName($modelName);
+        $this->modelToLangName[$modelName] = $langName;
+    }
+
+    /**
+     * Return the complete prefix for $className ($namespace.$baseLangKey.$langClass)
+     *
+     * @param string $className
+     * @return string
+     **/
+    protected function langKeyPrefix($className)
+    {
+
+        $langClass = $this->model2LangKey($className);
+
+        if ($namespace = $this->getLangNamespace($langClass)) {
+            return "$namespace::{$this->baseLangKey}.$langClass";
+        }
+
+        return "{$this->baseLangKey}.$langClass";
+    }
+
+    /**
+     * Returns the passed value if it is not an object and the class if an
+     * object was passed
+     *
+     * @param object|string $class
+     * @return string The classname
+     **/
+    protected function getClassName($class)
+    {
+        if(is_object($class)){
+            return get_class($class);
+        }
+        else{
+            return $class;
+        }
     }
 
 }
