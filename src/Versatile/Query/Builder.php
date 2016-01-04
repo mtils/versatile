@@ -178,7 +178,14 @@ class Builder
      **/
     public function isRelatedKey($key)
     {
-        return $this->parser->isRelatedKey($key);
+        if (!$this->parser->isRelatedKey($key)) {
+            return false;
+        }
+
+        list($join, $key) = $this->toJoinAndKey($key);
+
+        return $this->model->getTable() != $join;
+
     }
 
     /**
@@ -243,11 +250,13 @@ class Builder
             list($join, $column) = $this->toJoinAndKey($column);
 
             if ($join && $join != $mainTable) {
-//                 echo "\nadding $join";
                 $query->with($join);
                 $this->addJoinOnce($query, $this->model, $join);
             }
         }
+
+        // Check again if columns where added by the joins
+//         foreach 
     }
 
     protected function addWithsToQuery(Query $query)
@@ -434,7 +443,6 @@ class Builder
         $query->distinct();
 
         $this->addQueryColumn("$modelTable.$foreignKey");
-
         $this->joinClasses[$name] = $belongsTo->getRelated();
         $this->joinTable[$name] = $relatedTable;
         $this->joinAliases[$name] = $alias;
@@ -530,7 +538,6 @@ class Builder
 
         $knownColumns = $this->mergedQueryColumns();
 
-
         $table = $this->model->getTable();
 
         $modelKey = $this->model()->getKeyName();
@@ -542,6 +549,11 @@ class Builder
         foreach ($knownColumns as $key) {
 
             if ($this->isRelatedKey($key)) {
+                continue;
+            }
+
+            if ($this->parser->isRelatedKey($key)) {
+                $queryColumns[] = $key;
                 continue;
             }
 
