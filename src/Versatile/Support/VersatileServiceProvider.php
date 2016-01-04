@@ -3,6 +3,7 @@
 
 use Illuminate\Support\ServiceProvider;
 use Signal\Support\Laravel\IlluminateBus;
+use FormObject\Form;
 
 class VersatileServiceProvider extends ServiceProvider {
 
@@ -13,7 +14,7 @@ class VersatileServiceProvider extends ServiceProvider {
      */
     public function boot()
     {
-        //
+        $this->registerFormObjectNamer();
     }
 
     /**
@@ -195,6 +196,24 @@ class VersatileServiceProvider extends ServiceProvider {
             });
         });
 
+    }
+
+    protected function registerFormObjectNamer()
+    {
+
+        if (!class_exists('FormObject\Form', false)) {
+            return;
+        }
+
+        Form::provideAdditionalNamer(function($chain) {
+            $chain->append($this->getTitleIntrospectorNamer());
+        });
+
+    }
+
+    protected function getTitleIntrospectorNamer()
+    {
+        return $this->app->make('Versatile\Support\FormObject\TitleIntrospectorNamer');
     }
 
 }
