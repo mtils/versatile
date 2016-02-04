@@ -74,6 +74,10 @@ class TitleIntrospectorNamer implements NamerInterface
             $model = $this->modelOfFormClass($form);
         }
 
+        if (!$model) {
+            return $field->getName();
+        }
+
         return $this->titles->keyTitle($model, $this->fieldKey($field));
 
     }
@@ -87,9 +91,30 @@ class TitleIntrospectorNamer implements NamerInterface
     {
         $formClass = get_class($form);
 
-        if (substr($formClass, -4) == 'Form') {
-            return substr($formClass, 0, strlen($formClass)-4);
+        if (substr($formClass, -4) != 'Form') {
+            return;
         }
+
+        $modelClass = substr($formClass, 0, strlen($formClass)-4);
+
+        if (class_exists($modelClass)) {
+            return $modelClass;
+        }
+
+        if ($model = $form->getModel()) {
+            return get_class($model);
+        }
+
+        $fakeClass = $form->getClassName();
+
+        $modelClass = substr($fakeClass, 0, strlen($fakeClass)-4);
+
+        $modelClass = 'App\\'. $modelClass . 'haha';
+
+        if (class_exists($modelClass)) {
+            return $modelClass;
+        }
+
     }
 
     protected function baseName($class)
