@@ -108,7 +108,7 @@ class EloquentTitleIntrospector implements TitleIntrospector
     public function objectTitle($class, $quantity=1)
     {
         return $this->translator->choice(
-            $this->langKeyPrefix($class).".name",
+            $this->langKeyPrefix($this->getClassName($class)).".name",
             $quantity
         );
     }
@@ -136,6 +136,10 @@ class EloquentTitleIntrospector implements TitleIntrospector
      **/
     public function model2LangKey($modelName)
     {
+        if (!is_string($modelName)) {
+            $modelDisplay = is_object($modelName) ? get_class($modelName) : gettype($modelName);
+            throw new \UnexpectedValueException("modelName has to be string not $modelDisplay");
+        }
 
         if (isset($this->modelToLangName[$modelName])) {
             return $this->modelToLangName[$modelName];
