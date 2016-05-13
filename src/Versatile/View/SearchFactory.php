@@ -35,6 +35,7 @@ class SearchFactory implements CollectionFactory
     public function create($searchable, array $params=[], $view='html')
     {
         $collection = $this->createCollection($searchable);
+
         $collection->setSrc($searchable->get());
         $this->assignColumns($searchable, $collection);
         return $collection;
@@ -51,7 +52,10 @@ class SearchFactory implements CollectionFactory
     public function paginate($searchable, array $params=[], $view='html')
     {
         $collection = $this->createCollection($searchable);
-        $collection->setSrc($searchable->paginate());
+
+        $perPage = (isset($params['per_page']) && is_numeric($params['per_page'])) ? $params['per_page'] : null;
+
+        $collection->setSrc($searchable->paginate([], $perPage));
         $this->assignColumns($searchable, $collection);
 
         return $collection;
