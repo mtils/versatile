@@ -825,7 +825,7 @@ class Builder
         $columnsPassed = (func_num_args() > 1);
 
         $columns = $columnsPassed ? $columns : $this->getQueryColumns();
-
+        $columns = $columns ?: ['*'];
         $query = $this->buildQuery($columns);
 
         if ($columnsPassed) {
