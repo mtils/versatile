@@ -40,7 +40,7 @@ class BuilderSearch implements Search
     {
         $this->buildIfNotBuilded();
         $keys = $keys == [] ? $this->keys() : $keys;
-dd($keys);
+
         if (!$keys) {
             return $this->builder->get();
         }

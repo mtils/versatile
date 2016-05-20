@@ -822,10 +822,10 @@ class Builder
     public function paginate($perPage = null, $columns = array('*'))
     {
 
-        $columnsPassed = (func_num_args() > 1);
+        $columnsPassed = (func_num_args() > 1) && ($columns !== null);
 
         $columns = $columnsPassed ? $columns : $this->getQueryColumns();
-        $columns = $columns ?: ['*'];
+
         $query = $this->buildQuery($columns);
 
         if ($columnsPassed) {
