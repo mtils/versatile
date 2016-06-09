@@ -5,6 +5,7 @@ use Versatile\Query\SyntaxParser as DefaultParser;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder as Query;
 use Versatile\Introspection\EloquentPathIntrospector;
@@ -189,6 +190,21 @@ class Builder
     }
 
     /**
+     * Check if a key is a relation
+     *
+     * @param string $key
+     * @return bool
+     **/
+    public function isRelation($key)
+    {
+        if(!method_exists($this->model, $key)) {
+            return false;
+        }
+        $relation = $this->model->{$key}();
+        return ($relation instanceof Relation);
+    }
+
+    /**
      * {@inheritdoc}
      *
      * @param string $path Der Name der Eigenschaft
@@ -253,6 +269,12 @@ class Builder
                 $query->with($join);
                 $this->addJoinOnce($query, $this->model, $join);
             }
+
+            if ($this->isRelation($column)) {
+                $query->with($column);
+                $this->addJoinOnce($query, $this->model, $column);
+            }
+
         }
 
         // Check again if columns where added by the joins
@@ -548,7 +570,13 @@ class Builder
 
         foreach ($knownColumns as $key) {
 
+            // Relations will get fetched by with()
             if ($this->isRelatedKey($key)) {
+                continue;
+            }
+
+            // Relations will get fetched by with()
+            if ($this->isRelation($key)) {
                 continue;
             }
 
@@ -557,9 +585,11 @@ class Builder
                 continue;
             }
 
+
             $queryColumns[] = "$table.$key";
 
         }
+
 
         return $queryColumns;
 
