@@ -45,6 +45,11 @@ class Builder
 
     protected $onlyQueryColumns = [];
 
+    /**
+     * @var callable
+     **/
+    protected $queryModifier;
+
     public function __construct(Model $model){
         $this->model = $model;
         $this->query = $model->newQuery();
@@ -398,6 +403,10 @@ class Builder
 
         $this->addOrderBysToQuery($query);
 
+        if ($this->queryModifier) {
+            call_user_func($this->queryModifier, $query);
+        }
+
         return $query;
 
     }
@@ -429,6 +438,19 @@ class Builder
 
         }
 
+    }
+
+    /**
+     * This allows to hook into the builded query. Due the query is builded
+     * fresh every time this is the only way to manipulate it
+     *
+     * @param callable $modifier
+     * @return self
+     **/
+    public function modifyQuery(callable $modifier)
+    {
+        $this->queryModifier = $modifier;
+        return $this;
     }
 
     protected function applyBelongsTo(Query $query, Model $model, BelongsTo $belongsTo, $name){
