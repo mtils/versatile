@@ -50,6 +50,13 @@ interface ModelPresenter
     const VIEW_FULLTEXT = 'fulltext';
 
     /**
+     * Return all available vars
+     *
+     * @var string
+     **/
+    const VIEW_ALL = 'all';
+
+    /**
      * Returns an id for object $object. Makes it easier to populate inputs
      *
      * @param object $object
