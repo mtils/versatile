@@ -2,8 +2,9 @@
 
 use Mockery as m;
 use Versatile\Geo\GoogleClient;
+use PHPUnit\Framework\TestCase;
 
-class GoogleClientTest extends PHPUnit_Framework_TestCase
+class GoogleClientTest extends TestCase
 {
 
     public function testImplementsInterface()

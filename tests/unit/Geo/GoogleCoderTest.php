@@ -3,8 +3,9 @@
 use Mockery as m;
 use Versatile\Geo\GoogleCoder;
 use Versatile\Geo\Contracts\Client;
+use PHPUnit\Framework\TestCase;
 
-class GoogleCoderTest extends PHPUnit_Framework_TestCase
+class GoogleCoderTest extends TestCase
 {
 
     public function testImplementsInterface()

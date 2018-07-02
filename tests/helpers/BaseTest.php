@@ -5,8 +5,9 @@ use Mockery as m;
 use Illuminate\Database\Eloquent\Model;
 use Versatile\Attributes\UsesVirtualAttributes;
 use Versatile\Attributes\Dispatcher;
+use PHPUnit\Framework\TestCase;
 
-abstract class BaseTest extends PHPUnit_Framework_TestCase
+abstract class BaseTest extends TestCase
 {
 
     public function mockAttributesDispatcher()
