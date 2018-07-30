@@ -3,7 +3,6 @@
 use UnexpectedValueException;
 use Symfony\Component\Translation\TranslatorInterface as Translator;
 use Illuminate\Database\Eloquent\Model;
-use Signal\NamedEvent\BusHolderTrait;
 use Versatile\Introspection\Contracts\TypeIntrospector;
 use Versatile\Introspection\Contracts\PathIntrospector;
 use Versatile\Query\Contracts\SyntaxParser;
@@ -13,8 +12,6 @@ use XType\TemporalType;
 
 class EloquentTypeIntrospector implements TypeIntrospector
 {
-
-    use BusHolderTrait;
 
     protected $pathIntrospector;
 
@@ -98,8 +95,6 @@ class EloquentTypeIntrospector implements TypeIntrospector
      * @return \Xtype\AbstractType
      **/
     public function getManualKeyType($class, $column){
-
-        $this->fireOnce('type-introspector.load',[$this]);
 
         $class = ltrim($this->getClassName($class),'\\');
         if(isset($this->manualKeyTypes[$class.'|'.$column])){

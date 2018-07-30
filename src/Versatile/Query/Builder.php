@@ -477,7 +477,7 @@ class Builder
         $related = $belongsTo->getRelated();
         $relatedTable = $related->getTable();
         $foreignKey = $belongsTo->getForeignKey();
-        $otherKey = $belongsTo->getOtherKey();
+        $otherKey = $belongsTo->getOwnerKey();
 
         $alias = $this->joinNameToAlias($name);
 
@@ -502,7 +502,7 @@ class Builder
         $modelTable = $model->getTable();
         $related = $hasOne->getRelated();
         $relatedTable = $related->getTable();
-        $foreignKey = $hasOne->getPlainForeignKey();
+        $foreignKey = $hasOne->getForeignKeyName();
 
         $qualifiedLocalKey = $hasOne->getQualifiedParentKeyName();
         list($parentTable, $localKey) = explode('.', $qualifiedLocalKey);
@@ -539,7 +539,7 @@ class Builder
         $related = $belongsToMany->getRelated();
         $pivotTable = $belongsToMany->getTable();
         $pivotAlias = $pivotTable.'_pivot';
-        $pivotLocalKey = $belongsToMany->getOtherKey();
+        $pivotLocalKey = $belongsToMany->getQualifiedRelatedKeyName();
         $relatedTable = $related->getTable();
         $relationKey = $related->getKeyName();
         $foreignKey = $belongsToMany->getForeignKey();

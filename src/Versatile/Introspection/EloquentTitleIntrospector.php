@@ -1,8 +1,7 @@
 <?php namespace Versatile\Introspection;
 
 use UnexpectedValueException;
-use Symfony\Component\Translation\TranslatorInterface as Translator;
-use Signal\NamedEvent\BusHolderTrait;
+use Illuminate\Translation\Translator;
 use Versatile\Introspection\Contracts\TitleIntrospector;
 use Versatile\Introspection\Contracts\PathIntrospector;
 use Versatile\Query\Contracts\SyntaxParser;
@@ -11,8 +10,6 @@ use Versatile\Query\Contracts\SyntaxParser;
 
 class EloquentTitleIntrospector implements TitleIntrospector
 {
-
-    use BusHolderTrait;
 
     public $baseLangKey = 'models';
 
@@ -205,8 +202,6 @@ class EloquentTitleIntrospector implements TitleIntrospector
      **/
     public function getManualKeyTitle($class, $column)
     {
-
-        $this->fireOnce('title-introspector.load',[$this]);
 
         $class = ltrim($this->getClassName($class),'\\');
         if(isset($this->manualKeyTitles[$class.'|'.$column])){

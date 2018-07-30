@@ -1,13 +1,12 @@
 <?php namespace Versatile\View;
 
-use Signal\NamedEvent\BusHolderTrait;
 use Versatile\View\Contracts\CollectionFactory;
 use OutOfBoundsException;
+use Ems\Core\Patterns\HookableTrait;
 
 class CollectionFactoryChain implements CollectionFactory
 {
-
-    use BusHolderTrait;
+    use HookableTrait;
 
     protected $factories = [];
 
@@ -83,9 +82,13 @@ class CollectionFactoryChain implements CollectionFactory
 
     }
 
+    /**
+     * @param callable $factoryCreator
+     * @deprecated Use $app->afterResolving()
+     **/
     public function extend(callable $factoryCreator)
     {
-        $this->listen('collection-factory.load', $factoryCreator);
+        $this->onAfter('boot', $factoryCreator);
     }
 
     protected function boot()
@@ -93,7 +96,8 @@ class CollectionFactoryChain implements CollectionFactory
         if ($this->booted) {
             return;
         }
-        $this->fireOnce('collection-factory.load', $this);
+        $this->callBeforeListeners('boot', [$this]);
+        $this->callAfterListeners('boot', [$this]);
         $this->booted = true;
     }
 

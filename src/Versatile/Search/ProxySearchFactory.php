@@ -24,11 +24,11 @@ class ProxySearchFactory implements SearchFactory
     public function search(CriteriaContract $criteria)
     {
 
-        if ($factory = $this->nearestForClass($criteria->modelClass())) {
-            return call_user_func($factory, $criteria);
+        if (!$factory = $this->nearestForClass($criteria->modelClass())) {
+            throw new OutOfBoundsException('No factory for ' . $criteria->modelClass() . ' found');
         }
 
-        throw new OutOfBoundsException('No factory for ' . $criteria->modelClass() . ' found');
+        return call_user_func($factory, $criteria);
 
     }
 

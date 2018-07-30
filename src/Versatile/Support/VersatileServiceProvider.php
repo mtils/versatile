@@ -2,8 +2,8 @@
 
 
 use Illuminate\Support\ServiceProvider;
-use Signal\Support\Laravel\IlluminateBus;
 use FormObject\Form;
+use Versatile\View\CollectionFactoryChain;
 
 class VersatileServiceProvider extends ServiceProvider {
 
@@ -104,21 +104,17 @@ class VersatileServiceProvider extends ServiceProvider {
         );
 
         $this->app->singleton('versatile.view-collection-factory',function($app) {
-            $factory = $app->make('Versatile\View\CollectionFactoryChain');
-            $factory->setEventBus(new IlluminateBus($app['events']));
-            return $factory;
-        });
+            return $app->make(CollectionFactoryChain::class);
+            });
 
     }
 
     protected function registerBuilderViewCollectionFactory()
     {
-
-        $this->app['events']->listen('collection-factory.load', function($factory) {
+        $this->app->afterResolving(CollectionFactoryChain::class, function ($factory) {
             $factory->add($this->app->make('Versatile\View\QueryBuilderFactory'));
             $factory->add($this->app->make('Versatile\View\SearchFactory'));
         });
-
     }
 
     protected function registerModelPresenter()
@@ -187,11 +183,11 @@ class VersatileServiceProvider extends ServiceProvider {
 
                 $modelClass = $criteria->modelClass();
 
-                $builder = $this->app->make('Versatile\Query\Builder', [new $modelClass]);
+                $builder = $this->app->make('Versatile\Query\Builder', ['model' => new $modelClass]);
 
                 return $this->app->make('Versatile\Search\BuilderSearch',[
-                    $builder,
-                    $criteria
+                    'builder' => $builder,
+                    'criteria' => $criteria
                 ]);
             });
         });
