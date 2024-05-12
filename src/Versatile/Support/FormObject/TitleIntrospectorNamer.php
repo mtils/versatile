@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace Versatile\Support\FormObject;
 
@@ -121,7 +121,7 @@ class TitleIntrospectorNamer implements NamerInterface
     {
         $matches = [];
 
-        if (preg_match('@\\\\([\w]+)$@', $modelName, $matches)) {
+        if (preg_match('@\\\\([\w]+)$@', $class, $matches)) {
             return $matches[1];
         }
 

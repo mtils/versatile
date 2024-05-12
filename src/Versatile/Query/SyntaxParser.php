@@ -37,7 +37,7 @@ class SyntaxParser implements ParserInterface
      **/
     public function isRelatedKey($key)
     {
-        return (strpos($key, $this->keyDelimiter) !== FALSE);
+        return str_contains($key, $this->keyDelimiter);
     }
 
     /**

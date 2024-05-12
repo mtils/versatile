@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 use Mockery as m;
 use Versatile\Geo\GoogleCoder;
@@ -68,7 +68,7 @@ class GoogleCoderTest extends TestCase
         return m::mock('Versatile\Geo\Contracts\Client');
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         m::close();
     }

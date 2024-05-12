@@ -1,8 +1,6 @@
 <?php namespace Versatile\Introspection;
 
 use UnexpectedValueException;
-use Symfony\Component\Translation\TranslatorInterface as Translator;
-use Illuminate\Database\Eloquent\Model;
 use Versatile\Introspection\Contracts\TypeIntrospector;
 use Versatile\Introspection\Contracts\PathIntrospector;
 use Versatile\Query\Contracts\SyntaxParser;

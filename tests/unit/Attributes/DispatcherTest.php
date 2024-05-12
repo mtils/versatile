@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 use Mockery as m;
 
@@ -64,11 +64,9 @@ class DispatcherTest extends BaseTest
 
     }
 
-    /**
-     * @expectedException \OutOfBoundsException
-     **/
     public function testCreateProviderThrowsExceptionIfVirtualKeyNotSet()
     {
+        $this->expectException(\OutOfBoundsException::class);
         $dispatcher = $this->newDispatcher();
         $provider = m::mock('Versatile\Attributes\Contracts\Provider');
         $model = $this->newVirtualAttributesModel();
@@ -78,11 +76,9 @@ class DispatcherTest extends BaseTest
 
     }
 
-    /**
-     * @expectedException \OutOfBoundsException
-     **/
     public function testCreateProviderThrowsExceptionIfFactoryNotSet()
     {
+        $this->expectException(\OutOfBoundsException::class);
         $dispatcher = $this->newDispatcher();
         $provider = m::mock('Versatile\Attributes\Contracts\Provider');
         $model = $this->newVirtualAttributesModel();

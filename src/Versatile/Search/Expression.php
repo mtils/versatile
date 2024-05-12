@@ -3,12 +3,8 @@
 
 namespace Versatile\Search;
 
-use Versatile\Search\Contracts\Filter as FilterContract;
 use Versatile\Search\Contracts\Expression as ExpressionContract;
 use Versatile\Search\Contracts\Queryable;
-
-use ArrayIterator;
-use OutOfBoundsException;
 
 class Expression implements ExpressionContract
 {

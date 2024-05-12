@@ -3,6 +3,7 @@
 
 namespace Versatile\Search;
 
+use ReturnTypeWillChange;
 use Versatile\Search\Contracts\Filter as FilterContract;
 use Versatile\Search\Contracts\Expression as ExpressionContract;
 use Versatile\Search\Contracts\Queryable;
@@ -97,7 +98,7 @@ class Filter implements FilterContract
      *
      * @return \ArrayIterator
      **/
-    public function getIterator()
+    #[ReturnTypeWillChange] public function getIterator()
     {
         return new ArrayIterator($this->expressions);
     }
@@ -109,7 +110,7 @@ class Filter implements FilterContract
      * @param string|int $indexOrColumn
      * @return bool
      **/
-    public function offsetExists($indexOrColumn)
+    #[ReturnTypeWillChange] public function offsetExists($indexOrColumn)
     {
 
         if (is_numeric($indexOrColumn)) {
@@ -123,7 +124,7 @@ class Filter implements FilterContract
         }
     }
 
-    public function offsetGet($indexOrColumn)
+    #[ReturnTypeWillChange] public function offsetGet($indexOrColumn)
     {
 
         if (is_numeric($indexOrColumn) && isset($this->expressions[(int)$indexOrColumn])) {
@@ -133,7 +134,7 @@ class Filter implements FilterContract
         return $this->expressions[$this->indexOf($indexOrColumn)];
     }
 
-    public function offsetSet($indexOrColumn, $value)
+    #[ReturnTypeWillChange] public function offsetSet($indexOrColumn, $value)
     {
         if (is_numeric($indexOrColumn)) {
             $this->expressions[(int)$indexOrColumn] = $value;
@@ -146,7 +147,7 @@ class Filter implements FilterContract
         }
     }
 
-    public function offsetUnset($indexOrColumn)
+    #[ReturnTypeWillChange] public function offsetUnset($indexOrColumn)
     {
         if (is_numeric($indexOrColumn)) {
             unset($this->expressions[(int)$indexOrColumn]);

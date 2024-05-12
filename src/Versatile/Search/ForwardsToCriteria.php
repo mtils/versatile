@@ -82,7 +82,7 @@ trait ForwardsToCriteria
      **/
     public function removeSort($key)
     {
-        $this->criteria->removeSort($key, $order);
+        $this->criteria->removeSort($key);
         return $this;
     }
 }

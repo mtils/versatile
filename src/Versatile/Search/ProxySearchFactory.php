@@ -4,16 +4,15 @@
 namespace Versatile\Search;
 
 
+use Ems\Core\Patterns\ExtendableByClassHierarchyTrait;
 use OutOfBoundsException;
 use Versatile\Search\Contracts\SearchFactory;
 use Versatile\Search\Contracts\Criteria as CriteriaContract;
-use Collection\Support\FindsCallableByInheritance;
-
 
 class ProxySearchFactory implements SearchFactory
 {
 
-    use FindsCallableByInheritance;
+    use ExtendableByClassHierarchyTrait;
 
     /**
      * {@inheritdoc}
@@ -41,6 +40,6 @@ class ProxySearchFactory implements SearchFactory
      **/
     public function forModelClass($class, callable $factory)
     {
-        return $this->addCallable($class, $factory);
+        return $this->extend($class, $factory);
     }
 }

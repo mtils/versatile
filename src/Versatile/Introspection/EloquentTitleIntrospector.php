@@ -1,5 +1,7 @@
 <?php namespace Versatile\Introspection;
 
+use Ems\Contracts\Core\Type;
+use Ems\Core\Helper;
 use UnexpectedValueException;
 use Illuminate\Translation\Translator;
 use Versatile\Introspection\Contracts\TitleIntrospector;
@@ -26,6 +28,11 @@ class EloquentTitleIntrospector implements TitleIntrospector
     protected $namespaces = [];
 
     protected $modelToLangName = [];
+
+    /**
+     * @var SyntaxParser
+     */
+    protected $parser;
 
     public function __construct(Translator $translator,
                                 PathIntrospector $introspector,
@@ -148,7 +155,7 @@ class EloquentTitleIntrospector implements TitleIntrospector
             $modelName = $matches[1];
         }
 
-        return snake_case($modelName);
+        return Type::snake_case($modelName);
     }
 
     /**
@@ -236,7 +243,7 @@ class EloquentTitleIntrospector implements TitleIntrospector
      **/
     public function getLangNamespace($langClassName)
     {
-        return isset($this->namespaces[$langClassName]) ? $this->namespaces[$langClassName] : '';
+        return $this->namespaces[$langClassName] ?? '';
     }
 
     /**

@@ -8,21 +8,22 @@
     {
       "name": "Michael Tils",
       "email": "mtils@web-utils.de",
-      "homepage": "http://web-utils.de"
+      "homepage": "https://web-utils.de"
     }
   ],
   "require": {
-    "php": ">=5.4.0",
-    "ems/framework": "0.3.*",
-    "illuminate/database": "5.0.*|5.1.*|5.2.*|5.3.*|5.4.*|5.5.*"
+    "php": ">=8.2.0",
+    "ems/framework": "0.5.*",
+    "illuminate/database": "11.*"
   },
   "require-dev": {
-    "mockery/mockery": "~0.9"
+    "phpunit/phpunit": "11.1.2",
+    "mockery/mockery": "1.*"
   },
   "autoload": {
-    "psr-0": {
-      "Versatile": "src/"
+    "psr-4": {
+      "Versatile\\": "src/Versatile",
+      "Versatile\\Test\\": "tests"
     }
-  },
-  "minimum-stability": "dev"
+  }
 }

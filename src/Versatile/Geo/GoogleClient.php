@@ -2,6 +2,7 @@
 
 use OverflowException;
 use RangeException;
+use RuntimeException;
 use Versatile\Geo\Contracts\Client;
 
 class GoogleClient implements Client

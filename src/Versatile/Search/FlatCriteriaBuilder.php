@@ -224,7 +224,7 @@ class FlatCriteriaBuilder implements CriteriaBuilder
             return;
         }
 
-        $direction = isset($params[$this->directionParam]) ? $params[$this->directionParam] : 'asc';
+        $direction = $params[$this->directionParam] ?? 'asc';
 
         $direction = in_array($direction, ['asc','desc']) ? $direction : 'asc';
 

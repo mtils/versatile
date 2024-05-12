@@ -1,5 +1,6 @@
 <?php namespace Versatile\Query;
 
+use Illuminate\Contracts\Pagination\Paginator;
 use Versatile\Query\Contracts\SyntaxParser as Parser;
 use Versatile\Query\SyntaxParser as DefaultParser;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -283,7 +284,7 @@ class Builder
         }
 
         // Check again if columns where added by the joins
-//         foreach 
+//         foreach
     }
 
     protected function addWithsToQuery(Query $query)
@@ -388,7 +389,7 @@ class Builder
     {
 
         $this->joinClasses = [];
-        $this->joinTable = [];
+        $this->joinTables = [];
         $this->joinAliases = [];
 
         $query = clone $this->query;
@@ -476,8 +477,8 @@ class Builder
         }
         $related = $belongsTo->getRelated();
         $relatedTable = $related->getTable();
-        $foreignKey = $belongsTo->getForeignKey();
-        $otherKey = $belongsTo->getOwnerKey();
+        $foreignKey = $belongsTo->getForeignKeyName();
+        $otherKey = $belongsTo->getOwnerKeyName();
 
         $alias = $this->joinNameToAlias($name);
 
@@ -488,7 +489,7 @@ class Builder
 
         $this->addQueryColumn("$modelTable.$foreignKey");
         $this->joinClasses[$name] = $belongsTo->getRelated();
-        $this->joinTable[$name] = $relatedTable;
+        $this->joinTables[$name] = $relatedTable;
         $this->joinAliases[$name] = $alias;
 
     }
@@ -524,7 +525,7 @@ class Builder
         $query->distinct();
 
         $this->joinClasses[$name] = $hasOne->getRelated();
-        $this->joinTable[$name] = $relatedTable;
+        $this->joinTables[$name] = $relatedTable;
         $this->joinAliases[$name] = $alias;
 
     }
@@ -542,7 +543,7 @@ class Builder
         $pivotLocalKey = $belongsToMany->getQualifiedRelatedKeyName();
         $relatedTable = $related->getTable();
         $relationKey = $related->getKeyName();
-        $foreignKey = $belongsToMany->getForeignKey();
+        $foreignKey = $belongsToMany->getForeignPivotKeyName();
         $qualifiedLocalKey = $belongsToMany->getQualifiedParentKeyName();
 
         $alias = $this->joinNameToAlias($name);
@@ -554,7 +555,7 @@ class Builder
         $query->distinct();
 
         $this->joinClasses[$name] = $related;
-        $this->joinTable[$name] = $relatedTable;
+        $this->joinTables[$name] = $relatedTable;
         $this->joinAliases[$name] = $alias;
 
     }
@@ -869,7 +870,7 @@ class Builder
      *
      * @param  int    $perPage
      * @param  array  $columns
-     * @return \Illuminate\Pagination\Paginator
+     * @return Paginator
      */
     public function paginate($perPage = null, $columns = array('*'))
     {
@@ -896,7 +897,7 @@ class Builder
      *
      * @param  int    $perPage
      * @param  array  $columns
-     * @return \Illuminate\Pagination\Paginator
+     * @return Paginator
      */
     public function simplePaginate($perPage = null, $columns = array('*'))
     {

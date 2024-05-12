@@ -3,14 +3,42 @@
 
 namespace Versatile\View;
 
+use Ems\Core\Patterns\ExtendableByClassHierarchyTrait;
+use Versatile\Support\CallableContainer;
 use Versatile\View\Contracts\ModelPresenter;
-use Collection\Support\FindsCallableByInheritance;
-use ReflectionClass;
 
 class ModelPresenterRegistry implements ModelPresenter
 {
 
-    use FindsCallableByInheritance;
+    use ExtendableByClassHierarchyTrait;
+
+    /**
+     * @var CallableContainer
+     */
+    protected $idContainer;
+
+    /**
+     * @var CallableContainer
+     */
+    protected $keyContainer;
+
+    /**
+     * @var CallableContainer
+     */
+    protected $shorNameContainer;
+
+    /**
+     * @var CallableContainer
+     */
+    protected  $searchableKeyContainer;
+
+    public function __construct()
+    {
+        $this->idContainer = new CallableContainer();
+        $this->keyContainer = new CallableContainer();
+        $this->shorNameContainer = new CallableContainer();
+        $this->searchableKeyContainer = new CallableContainer();
+    }
 
     /**
      * {@inheritdoc}
@@ -20,7 +48,7 @@ class ModelPresenterRegistry implements ModelPresenter
      **/
     public function id($object)
     {
-        if ($provider = $this->nearestForClass(get_class($object), 'id')) {
+        if ($provider = $this->idContainer->nearestForClass(get_class($object))) {
             return call_user_func($provider, $object);
         }
         return '';
@@ -35,7 +63,7 @@ class ModelPresenterRegistry implements ModelPresenter
      **/
     public function shortName($object, $view=self::VIEW_DEFAULT)
     {
-        if ($provider = $this->nearestForClass(get_class($object), 'shortName')) {
+        if ($provider = $this->shorNameContainer->nearestForClass(get_class($object))) {
             return call_user_func($provider, $object, $view);
         }
         return '';
@@ -50,7 +78,7 @@ class ModelPresenterRegistry implements ModelPresenter
      **/
     public function keys($class, $view=self::VIEW_DEFAULT)
     {
-        if ($provider = $this->nearestForClass($class, 'keys')) {
+        if ($provider = $this->keyContainer->nearestForClass($class)) {
             return call_user_func($provider, $class, $view);
         }
         return [];
@@ -65,7 +93,7 @@ class ModelPresenterRegistry implements ModelPresenter
      **/
     public function searchableKeys($class, $view=self::VIEW_DEFAULT)
     {
-        if ($provider = $this->nearestForClass($class, 'searchableKeys')) {
+        if ($provider = $this->searchableKeyContainer->nearestForClass($class)) {
             return call_user_func($provider, $class, $view);
         }
         return [];
@@ -80,7 +108,7 @@ class ModelPresenterRegistry implements ModelPresenter
      **/
     public function provideId($class, callable $provider)
     {
-        $this->addCallable($class, $provider, 'id');
+        $this->idContainer->extend($class, $provider);
         return $this;
     }
 
@@ -93,7 +121,7 @@ class ModelPresenterRegistry implements ModelPresenter
      **/
     public function provideShortName($class, callable $provider)
     {
-        $this->addCallable($class, $provider, 'shortName');
+        $this->shorNameContainer->extend($class, $provider);
         return $this;
     }
 
@@ -106,7 +134,7 @@ class ModelPresenterRegistry implements ModelPresenter
      **/
     public function provideKeys($class, callable $provider)
     {
-        $this->addCallable($class, $provider, 'keys');
+        $this->keyContainer->extend($class, $provider);
         return $this;
     }
 
@@ -119,7 +147,7 @@ class ModelPresenterRegistry implements ModelPresenter
      **/
     public function provideSearchableKeys($class, callable $provider)
     {
-        $this->addCallable($class, $provider, 'searchableKeys');
+        $this->searchableKeyContainer->extend($class, $provider);
         return $this;
     }
 

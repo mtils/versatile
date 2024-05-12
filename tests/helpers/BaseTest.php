@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 use Mockery as m;
 
@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 abstract class BaseTest extends TestCase
 {
 
-    public function mockAttributesDispatcher()
+    public function mockAttributesDispatcher() : Dispatcher&m\MockInterface
     {
         return m::mock('Versatile\Attributes\Dispatcher');
     }
@@ -20,13 +20,13 @@ abstract class BaseTest extends TestCase
         return new VirtualAttributesModel();
     }
 
-    protected function mockModel()
+    protected function mockModel() : Model&m\MockInterface
     {
         return m::mock('Illuminate\Database\Eloquent\Model');
     }
 
 
-    public function tearDown()
+    public function tearDown(): void
     {
         m::close();
     }
